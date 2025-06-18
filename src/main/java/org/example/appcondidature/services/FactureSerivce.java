@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class FactureSerivce {
@@ -24,33 +25,26 @@ public class FactureSerivce {
     @Autowired
     private ClientRepo clientRepo;
 
-    public List<FactureDto> getFactures(){
-        List<Facture> factures = factureRepo.findAll();
-        List<FactureDto>  facturesDto = new ArrayList<FactureDto>();
+    public List<FactureDto> getFactures() {
+        return factureRepo.findAll().stream().map(fact -> {
+            FactureDto dto = new FactureDto();
+            dto.id = fact.getId();
+            dto.date = fact.getDate();
+            dto.client_id = fact.getClient().getId();
 
-        for (Facture fact : factures) {
+            dto.lignes = fact.getLignes().stream().map(lf -> {
+                LigneFactureDTO l = new LigneFactureDTO();
+                l.description = lf.getDescription();
+                l.quantite = lf.getQuantite();
+                l.prixUnitaireHT = lf.getPrixUnitaireHT();
+                l.tauxTVA = lf.getTauxTVA();
+                return l;
+            }).collect(Collectors.toList());
 
-            FactureDto factureDto = new FactureDto();
-            factureDto.date = fact.getDate();
-
-            List<LigneFactureDTO> lignes = new ArrayList<>();
-            for (LigneFacture ligneFacture : fact.getLignes()) {
-                LigneFactureDTO ligneFactureDto = new LigneFactureDTO();
-                ligneFactureDto.prixUnitaireHT = ligneFacture.getPrixUnitaireHT();
-                ligneFactureDto.description = ligneFacture.getDescription();
-                ligneFactureDto.quantite = ligneFacture.getQuantite();
-                ligneFactureDto.tauxTVA = ligneFacture.getTauxTVA();
-                lignes.add(ligneFactureDto);
-            }
-            factureDto.lignes = lignes;
-            factureDto.client_id = fact.getClient().getId();
-            factureDto.id= fact.getId();
-
-            facturesDto.add(factureDto);
-        }
-        return facturesDto;
-
+            return dto;
+        }).collect(Collectors.toList());
     }
+
 
 
     @Transactional
@@ -66,7 +60,7 @@ public class FactureSerivce {
 
         List<LigneFacture> lignes = new ArrayList<>();
 
-        //on doit parcourir toutes les lignes pour qu'on calcule HT eT TVA  totale
+        //on doit parcourir toutes les lignes pour  calcule HT eT TVA  totale
         for (LigneFactureDTO ligneDTO : dto.lignes) {
 
             LigneFacture ligne = new LigneFacture();
